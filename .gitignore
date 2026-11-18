@@ -1,6 +1,8 @@
 # 依赖与模型：不进仓库（首次运行自动装/自动下载）
 node_modules/
 models/
+# 本地用 pnpm 装依赖时生成；仓库锁文件仍是 package-lock.json
+pnpm-lock.yaml
 
 # 备份
 _bak/
