@@ -25,6 +25,9 @@
 4. **配套脚本**（`tools/`，不是插件代码）
    - `send-qq.mjs`：QQ 官方机器人主动发消息（群 / 私聊）
    - `sync-session-log.mjs`：把 DSH 会话日志导出成 `对话记录\YYYY-MM-DD.md`
+5. **附件解析**（配合 msg-hub 的 QQ 通道）
+   - 文件消息（docx / xlsx / pptx / txt 等）下载后本地抽正文，截断 4000 字注入
+   - 细节与踩过的坑见 [`docs/附件解析.md`](docs/附件解析.md)
 
 ### 已知不足（能用，但没打磨）
 
