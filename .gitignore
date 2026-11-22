@@ -6,6 +6,9 @@ pnpm-lock.yaml
 
 # 备份
 _bak/
+*.bak-*
+*.bak2
+*.bak-md
 
 # 临时实验脚本（自己跑数用的，不是插件功能）
 _*.mjs
