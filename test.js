@@ -12,6 +12,7 @@ import {
   pruneBackups, parseRelations,
 } from './lib/state.js'
 import { grams, buildIndex, searchMemory, loadOrBuild, bumpMentions, mentionCount, mentionKey, bumpByUserText, chatChunks, readChatChunks, markSeen, resolveQueryDate, readChatDay, shiftDate, eligibleChunks, enrichResults, formatResultLines, lineDate, lineAllowed, clampTunables } from './lib/search.js'
+import { classify, peerIdOf } from './lib/router.js'
 
 const makeCfg = () => {
   const root = mkdtempSync(join(tmpdir(), 'mk-'))
@@ -772,7 +773,7 @@ test('readChatChunks 不再把长消息截到 300（只影响 chat_search）', (
   } finally { clean(cfg) }
 })
 
-test('群聊注入块不进私聊原文（chatChunks 丢 [群聊最近消息] 块）', () => {
+test('来源标签：群聊块保留并标 source=group，includeGroup=false 才剔', () => {
   const text = [
     '**19:31 [他]**',
     '[群聊最近消息，供你了解上下文；不要逐条复述]',
@@ -787,10 +788,26 @@ test('群聊注入块不进私聊原文（chatChunks 丢 [群聊最近消息] �
     '**20:00 [主人]**',
     '这是我的私聊消息',
   ].join('\n')
-  const chunks = chatChunks('/x/2026-11-21.md', text, 2000)
-  assert.equal(chunks.length, 1, '群聊那一段和它后面的回复都丢，只剩私聊')
-  assert.ok(chunks[0].text.includes('这是我的私聊消息'))
-  assert.ok(!chunks.some(c => c.text.includes('群聊最近消息') || c.text.includes('蘇南晴') || c.text.includes('永州')))
+  const all = chatChunks('/x/2026-11-21.md', text, 2000)
+  assert.equal(all.length, 3, '群聊块和它的回复都保留')
+  assert.deepEqual(all.map(c => c.source), ['group', 'group', 'private'])
+  assert.equal(all[0].label, '群聊')
+  assert.ok(all[0].text.includes('湘超'), '群聊块内容不再被删，只是打标签')
+  const onlyPrivate = chatChunks('/x/2026-11-21.md', text, 2000, { includeGroup: false })
+  assert.equal(onlyPrivate.length, 1, 'includeGroup=false 时才剔群聊')
+  assert.equal(onlyPrivate[0].source, 'private')
+  assert.ok(onlyPrivate[0].text.includes('这是我的私聊消息'))
+})
+
+test('classify：朋友私聊降级 guest，主人私聊仍是 personal', () => {
+  const owner = ['6AC1C75FA064B71587F4B2C9B123A5AC']
+  assert.equal(classify('ch-qq-c2c:6AC1C75FA064B71587F4B2C9B123A5AC', owner), 'personal')
+  assert.equal(classify('ch-qq-c2c:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', owner), 'guest')
+  assert.equal(classify('ch-qq-c2c:AAAA', []), 'personal', '没配 owner 时保持旧行为')
+  assert.equal(classify('ch-qq-group:G:U', owner), 'group')
+  assert.equal(classify('session-1234', owner), 'personal')
+  assert.equal(classify('code:x', owner), 'code')
+  assert.equal(peerIdOf('ch-qq-c2c:AAAA'), 'AAAA')
 })
 
 test('contextLines=0 不附上下文（省 token 时用）', () => {
