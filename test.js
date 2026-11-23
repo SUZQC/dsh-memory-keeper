@@ -772,6 +772,27 @@ test('readChatChunks 不再把长消息截到 300（只影响 chat_search）', (
   } finally { clean(cfg) }
 })
 
+test('群聊注入块不进私聊原文（chatChunks 丢 [群聊最近消息] 块）', () => {
+  const text = [
+    '**19:31 [他]**',
+    '[群聊最近消息，供你了解上下文；不要逐条复述]',
+    '- 19:25 蘇南晴: 测试全量',
+    '',
+    '[刚刚 @你 的消息]',
+    '<@33C4> 今晚湘超永州vs长沙',
+    '',
+    '**19:31 [我]**',
+    '今晚 19:38 开球，永州主场对长沙。',
+    '',
+    '**20:00 [主人]**',
+    '这是我的私聊消息',
+  ].join('\n')
+  const chunks = chatChunks('/x/2026-11-21.md', text, 2000)
+  assert.equal(chunks.length, 1, '群聊那一段和它后面的回复都丢，只剩私聊')
+  assert.ok(chunks[0].text.includes('这是我的私聊消息'))
+  assert.ok(!chunks.some(c => c.text.includes('群聊最近消息') || c.text.includes('蘇南晴') || c.text.includes('永州')))
+})
+
 test('contextLines=0 不附上下文（省 token 时用）', () => {
   const cfg = makeCfg()
   try {
